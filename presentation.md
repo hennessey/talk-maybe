@@ -72,3 +72,58 @@ The goal of this talk is not to persuade anyone to use this pattern exclusively,
 ```
 
 Conditional logic (branching) is pervasive in imperative code and can lead to some sticky situations that make the code much more difficult to reason about when the conditions start piling up. Deeply nested conditions are a code smell that we all are familiar with and there are a variety of different strategies for reducing the need to do so. Here's one more!
+
+
+```javascript
+        app.post("user/:username", function(req, res)
+        {
+            if (req.username) {
+                const user = _userResository.getByUserName(req.username);
+                if (!_userResository.getByUserName(req.username)) {
+                    if (req != null && req.roles != null) {
+                        let newUser = _userRepository.add({ req.username, req.roles });
+                        if (newUser) {
+                            return res.status(200).send(newUser.id);
+                        } else {
+                            return res.status(500).send("Unable to create user.");
+                        }
+                    } else {
+                        return res.status(400).send("User must be created with at least one role.");
+                    }
+                } else {
+                    return res.status(400).send("User already exists.");
+                }
+            } else {
+                return res.status(400).send("Username cannot be empty.");
+            }
+        });
+```
+
+Small brain : Early returns
+```javascript
+        app.post("user/:username", function(req, res)
+        {
+            if (!req.username)
+                return res.status(400).send("Username cannot be empty.");
+
+            const user = _userResository.getByUserName(req.username);
+
+            if (user)
+                return res.status(400).send("User already exists.");
+
+            if (req == null || req.roles == null)
+                return res.status(400).send("User must be created with at least one role.");
+
+            let newUser = _userRepository.add({ req.username, req.roles });
+
+            if (newUser)
+                return res.status(200).send(newUser.id);
+
+            else
+                return res.status(500).send("Unable to create user.");
+        });
+```
+
+large brain : Maybe
+
+Cosmic brain : Realizing the human beings are incapable of writing bug free code and throwing your laptop into the Charles
