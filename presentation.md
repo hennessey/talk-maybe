@@ -99,7 +99,7 @@ Conditional logic (branching) is pervasive in imperative code and can lead to so
         });
 ```
 
-Small Brain : Early returns
+Small Brain : Early returns / Fail fast handling
 ```javascript
         app.post("user/:username", function(req, res)
         {
@@ -172,6 +172,82 @@ class Maybe {
         return this.fmap(f).join();
     }
 }
+```
+
+Nesting
+```javascript
+    app.post("user/:username", function(req, res)
+    {
+        if (req && req.username) {
+            try {
+                let user = _userRepository.getUser(username);
+                
+                if (user) {
+                    return res.status(200).send(user);
+                } else {
+                    return res.status(404).send("Username not found");
+                }
+            } catch(e) {
+                //log stuff 
+                return res.status(500).send("Internal Server Error");
+            }
+        } else {
+            return res.status(400).send("Bad request");
+        }
+    });
+```
+
+Early Return
+```javascript
+    app.post("user/:username", function(req, res)
+    {
+        if (!req || !req.username) return res.status(400).send("Bad request");
+
+        try {
+            let user = _userRepository.getUser(username);
+            return (user) 
+                ? res.status(200).send(user);
+                : res.status(404).send("Username not found");
+            
+        } catch(e) {
+            //log stuff 
+            return res.status(500).send("Internal Server Error");
+        }
+    });
+```
+
+Using Either>
+```javascript
+    app.post("user/:username", function(req, res)
+    {
+        let req = Maybe.of(req)
+            .map(req => Maybe.of(req.response))
+            .orElse();
+
+        if (!req || !req.username) return res.status(400).send("Bad request");
+
+        try {
+            let user = _userRepository.getUser(username);
+            return (user) 
+                ? res.status(200).send(user);
+                : res.status(404).send("Username not found");
+            
+        } catch(e) {
+            //log stuff 
+            return res.status(500).send("Internal Server Error");
+        }
+    });
+```
+```javascript
+    app.post("user/:username/roles", function(req, res)
+    {
+        let user = Maybe.of(req.username)
+            .map(username => _userRepository.getByUserName(username))
+            .map(user => _roleRepository.getRolesForUser(user))
+            .getOrElse({status: 404, message: "Unable to get user"})
+
+        return Maybe.
+    });
 ```
 
 Cosmic brain : Realizing the human beings are incapable of writing bug free code and throwing your laptop into the Charles
