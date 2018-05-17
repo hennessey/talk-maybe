@@ -196,9 +196,12 @@ class Maybe {
 }
 ```
 
+So `Maybe` is designed for handling cases where we either have a value (`Just(value)`) or we don't (`Nothing`). What if we wanted to handle not just nulls, but different errors as well?
+
+Consider the following hypothetical code
 Nesting
 ```javascript
-    app.post("user/:username", function(req, res)
+    app.get("user/:username", function(req, res)
     {
         if (req && req.username) {
             try {
@@ -219,7 +222,7 @@ Nesting
     });
 ```
 
-Early Return
+As with before, early returns make this 99.999999999% more readable:
 ```javascript
     app.post("user/:username", function(req, res)
     {
@@ -238,9 +241,33 @@ Early Return
     });
 ```
 
-Nesting
+What if we could write some sort of container like `Maybe` that instead of just handling cases where a value was `null` or `undefined` it took care of sitations where something returned and error?
 ```javascript
-    let makeLoud = (str) => str.toUpper();
+
+    //getUserNameFromReq :: string -> Either Error string
+    const getUserNameFromReq = (req) => 
+        Maybe.of(req.userName).toEither(new Error("Bad request"));
+
+    //getUserFromRepo :: string -> Either Error User
+    const getUserFromRepo = (userName) => {
+        try {
+            return Maybe.of(_userRepsitory.getUser(userName))
+                .toEither(new Error('User not found'));
+        } catch (e) {
+            return Left.of(new Error(`Internal Server Error: ${e}`));
+        }
+    };
+
+    app.post("user/:username", function(req, res)
+    {
+        return getUserNameFromReq(req)
+            .chain(getUserFromRepo)
+            .value()
+    });
+```
+
+```javascript
+    let makeLoud = (str) => str.toUpperCase();
     let yell = (str) => `${str}!`;
 
     let yellToTheRooftops = (str) => {
@@ -256,7 +283,7 @@ Nesting
 
 Early return
 ```javascript
-    let makeLoud = (str) => str.toUpper();
+    let makeLoud = (str) => str.toUpperCase();
     let yell = (str) => `${str}!`;
 
     let yellToTheRooftops = (str) => {
@@ -270,7 +297,7 @@ Early return
 
 Maybe monad
 ```javascript
-    let makeLoud = (str) => str.toUpper();
+    let makeLoud = (str) => str.toUpperCase();
     let yell = (str) => `${str}!`;
 
     let yellToTheRooftops = (str) =>
@@ -284,7 +311,7 @@ Maybe monad
 
 This looks alot like a promise! For all intents and purposes promises can be though of as monads with some extra runtime specific behavior (added to the event queue and executed once the main thread is available)
 ```javascript
-    let makeLoud = (str) => str.toUpper();
+    let makeLoud = (str) => str.toUpperCase();
     let yell = (str) => `${str}!`;
 
     async function YellToTheRooftops(str) {

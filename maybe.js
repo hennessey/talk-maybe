@@ -11,14 +11,14 @@ class Maybe {
         return new Maybe(val);
     }
 
-    isNothing() {
-        this.value === null || this.value === undefined;
+    get isNothing() {
+        return this.value === null || this.value === undefined;
     }
 
     //"lifts" a function into a context ("functor map") and gives us a way to inject the value our context wraps into functions
     //a.k.a. "Map"
     //fmap :: (a -> b) -> Maybe a -> Maybe b
-    fmap(fn) {
+    map(fn) {
         //If our context is wrapping nothing, return a context wrapping nothing
         if (this.isNothing) return Maybe.of(null); 
 
@@ -33,15 +33,19 @@ class Maybe {
         return this.isNothing() ? Maybe.of(null) : this.value;
     }
 
-    //"Bind" a function that returns a context and flattens it into this context and gives us a way
+    //"Chain" a function that returns a context and flattens it into this context and gives us a way
     //to chain functions together that return Maybes 
-    //a.k.a. "FlatMap", "Chain"
+    //a.k.a. "FlatMap", "bind"
     //chain :: (a -> Maybe b) -> Maybe a -> Maybe b
-    bind(fn) {
+    chain(fn) {
         //Lifts the function into our context, calls it with our wrapped value(fmap) and then flattens it(join)
-        return this.fmap(f).join();
+        return this.map(fn).join();
     }
 
+    inspect() {
+        return `Maybe(${this.value})`;
+    }
+    
     getOrElse(elseVal) {
         return this.isNothing() ? elseVal : this.value;
     }
