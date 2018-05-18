@@ -30,7 +30,7 @@ class Maybe {
     //"flattens" or "unwraps" our context by a layer
     join() {
         //If we're wrapping nothing, return a context wrapping nothing. Otherise return our value
-        return this.isNothing() ? Maybe.of(null) : this.value;
+        return this.isNothing ? Maybe.of(null) : this.value;
     }
 
     //"Chain" a function that returns a context and flattens it into this context and gives us a way
@@ -47,7 +47,7 @@ class Maybe {
     }
     
     getOrElse(elseVal) {
-        return this.isNothing() ? elseVal : this.value;
+        return this.isNothing ? elseVal : this.value;
     }
 }
 

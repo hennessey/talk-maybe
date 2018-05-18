@@ -1,6 +1,6 @@
 ## Using Maybe to reduce branching in code
 
-The goal of this talk is not to persuade anyone to use this pattern exclusively, but to introduce another way to refactor code that depends on heavily nested conditional logic. As with everything, there are tradeoffs and oftentimes conditional logic is the simplest way to convey a branch in code. 
+The goal of this talk is not to persuade anyone to use this pattern exclusively, but to introduce another way to refactor code that depends on heavily nested conditional logic for null checks. As with everything, there are tradeoffs and most of the time imperative conditional logic is the simplest way to convey a branch in code. 
 
 ### Different ways we can branch in Javascipt:
 ```javascript
@@ -75,7 +75,7 @@ Conditional logic (branching) is pervasive in imperative code and can lead to so
 
 Nesting
 ```javascript
-    let makeLoud = (str) => str.toUpper();
+    let makeLoud = (str) => str.toUpperCase();
     let yell = (str) => `${str}!`;
 
     let yellToTheRooftops = (str) => {
@@ -86,11 +86,12 @@ Nesting
         }
     }
 
-    yellToTheRoofTops(""); // ""
+    yellToTheRoofTops("It's gucci"); // "IT'S GUCCI!"
 ```
+
 In 99.99999999% of cases, using early returns should be sufficient. Even in this contrived example this is alot easier to reason about in a linear way:
 ```javascript
-    let makeLoud = (str) => str.toUpper();
+    let makeLoud = (str) => str.toUpperCase();
     let yell = (str) => `${str}!`;
 
     let yellToTheRooftops = (str) => {
@@ -99,32 +100,44 @@ In 99.99999999% of cases, using early returns should be sufficient. Even in this
         return yell(makeItLoud(str));
     }
 
-    yellToTheRoofTops(""); // ""
+    yellToTheRoofTops("It's Gucci"); // "IT'S GUCCI!"
 ```
 
 But what if decided that null checking was for the birds and decided that we didn't want to do any more?
+We would need some way to encapsulate the concept of a null check pipeline.
+
 One way to accomplish this would be to use a promise like so:
 
 ```javascript
-    let makeLoud = (str) => str.toUpper();
+    let makeLoud = (str) => str.toUpperCase();
     let yell = (str) => `${str}!`;
-    let maybe = (str) => new Promise((resolve, reject) => {
+
+    let maybePromise = (str) => new Promise((resolve, reject) => {
         if (!str) reject("Nothing :(");
 
         resolve(str);
     })
+
     async function YellToTheRooftops(str) {
-            maybe(str) //wrap up the 'str' value into our Promise context
-                .then(str => maybe(makeLoud(str))) // the supplied callback to "then" will only get called if the previous promise resolved
-                .then(str => maybe(yell(str))) // ditto
+            return maybePromise(str) //wrap up the 'str' value into our Promise context
+                .then(s => makeLoud(s)) // the supplied callback to "then" will only get called if the previous promise resolved
+                .then(s => yell(s)) // ditto
                 .catch(e => e)  // only called if any of the promises in the chain threw or were exlicitly rejected
     }
 
-    await YellToTheRoofTops(undefined); //"Nothing :("
-    await YellToTheRoofTops("It's Gucci"); // "IT'S GUCCI!"
+    async function demoYell(str) {
+        let y = await YellToTheRooftops(str);
+
+        console.log(y);
+
+        return undefined;
+    }
+
+    demoYell("it's gucci") // IT'S GUCCI
+    demoYell(undefined) // Nothing :(
 ```
 
-The above will work, but it feels kind of wrong to force something synchronous into a language feature meant for ansychronous actions and having to update all of our calling code to ``await`` it. What if we could create a wrapper that did basically the same thing synchronously?
+The above will work, but it feels kind of wrong to force something synchronous into a language construct meant for ansychronous actions and having to update all of our calling code to ``await`` it. What if we could create a wrapper that did basically the same thing synchronously?
 
 Using our new hypothetical `Maybe` object
 ```javascript
@@ -133,15 +146,17 @@ Using our new hypothetical `Maybe` object
 
     let yellToTheRooftops = (str) =>
         Maybe.of(str) //wrap up the 'str' value in our Maybe context
-            .fmap(makeLoud) // the supplied callback to map will only get called if str is not null/undefined
-            .fmap(yell)
+            .map(makeLoud) // the supplied callback to map will only get called if str is not null/undefined
+            .map(yell)
             .getOrElse(undefined) //return the value, if not returned the supplied value
 
     yellToTheRoofTops("It's Gucci"); // "IT'S GUCCI!"
+    yellToTheRoofTops(undefined); // undefined
 ```
 
 This looks alot like a promise! For all intents and purposes promises can be though of as monads with some extra runtime specific behavior (added to the event queue and executed once the main thread is available)
 You can think of a monad as a functional way to chain computations. Let's see how we can chain a null check.
+
 Our "Maybe" context:
 
 ```javascript
@@ -158,14 +173,14 @@ class Maybe {
         return new Maybe(val);
     }
 
-    isNothing() {
+    get isNothing() {
         this.value === null || this.value === undefined;
     }
 
     //"lifts" a function into a context ("functor map") and gives us a way to inject the value our context wraps into functions
-    //a.k.a. "Map"
-    //fmap :: (a -> b) -> Maybe a -> Maybe b
-    fmap(fn) {
+    //a.k.a. "fmap"
+    //map :: (a -> b) -> Maybe a -> Maybe b
+    map(fn) {
         //If our context is wrapping nothing, return a context wrapping nothing
         if (this.isNothing) return Maybe.of(null); 
 
@@ -177,21 +192,21 @@ class Maybe {
     //"flattens" or "unwraps" our context by a layer
     join() {
         //If we're wrapping nothing, return a context wrapping nothing. Otherise return our value
-        return this.isNothing() ? Maybe.of(null) : this.value;
+        return this.isNothing ? Maybe.of(null) : this.value;
     }
     
 
-    //"Bind" a function that returns a context and flattens it into this context and gives us a way
+    //"Chain" a function that returns a context and flattens it into this context and gives us a way
     //to chain functions together that return Maybes 
     //a.k.a. "FlatMap", "Chain"
     //chain :: (a -> Maybe b) -> Maybe a -> Maybe b
-    bind(fn) {
+    chain(fn) {
         //Lifts the function into our context, calls it with our wrapped value(fmap) and then flattens it(join)
-        return this.fmap(f).join();
+        return this.map(f).join();
     }
 
     getOrElse(elseVal) {
-        return this.isNothing() ? elseVal : this.value;
+        return this.isNothing ? elseVal : this.value;
     }
 }
 ```
