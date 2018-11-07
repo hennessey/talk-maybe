@@ -17,7 +17,7 @@ class Maybe {
 
     //"lifts" a function into a context ("functor map") and gives us a way to inject the value our context wraps into functions
     //a.k.a. "Map"
-    //fmap :: (a -> b) -> Maybe a -> Maybe b
+    //map :: (a -> b) -> Maybe a -> Maybe b
     map(fn) {
         //If our context is wrapping nothing, return a context wrapping nothing
         if (this.isNothing) return Maybe.of(null); 

@@ -1,0 +1,14 @@
+{
+  "name": "monads",
+  "version": "1.0.0",
+  "description": "",
+  "main": "either.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "monet": "^0.8.10"
+  }
+}

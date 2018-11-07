@@ -259,25 +259,31 @@ As with before, early returns make this 99.999999999% more readable:
 What if we could write some sort of container like `Maybe` that instead of just handling cases where a value was `null` or `undefined` it took care of sitations where something returned and error?
 ```javascript
 
-    //getUserNameFromReq :: string -> Either Error string
-    const getUserNameFromReq = (req) => 
-        Maybe.of(req.userName).toEither(new Error("Bad request"));
+    //safeGetFromRequest :: request -> property -> Either Error Username
+    const safeGetFromRequest = (property) => (req) => 
+        Maybe.of(req[property]).toEither({message: 'Bad request', code: 400})
 
-    //getUserFromRepo :: string -> Either Error User
+    //safeGetFromUserName :: request -> Either Error Username
+    const safeGetUserName = safeGetFromRequest('username');
+    
+    //getUserFromRepo :: Username -> Either Error User
     const getUserFromRepo = (userName) => {
         try {
-            return Maybe.of(_userRepsitory.getUser(userName))
-                .toEither(new Error('User not found'));
+            return Maybe.of(_userRepository.getUser(userName))
+                .toEither({ message:'User not found', code: 404 })
         } catch (e) {
-            return Left.of(new Error(`Internal Server Error: ${e}`));
+            return Either.left({ message: 'Internal Server Error', code: 500 });
         }
-    };
+    }
 
     app.post("user/:username", function(req, res)
     {
-        return getUserNameFromReq(req)
-            .chain(getUserFromRepo)
-            .value()
+        return safeGetUserName(req)
+            .flatMap(username => getUserFromRepo(userName))
+            .cata(
+                (failure) => res.status(failure.code).message(failure.message),
+                (user) => res.status(200).message(user)
+            );
     });
 ```
 

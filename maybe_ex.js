@@ -1,7 +1,7 @@
 const Maybe = require("./maybe");
 
-const yell = (str) => `${str}!`;
-const makeLoud = (str) => str.toUpperCase();
+const yell = (str) => Maybe.of(`${str}!`);
+const makeLoud = (str) => Maybe.of(str.toUpperCase());
 
 const yellToTheRooftops = (str) => yell(makeLoud(str));
 //const fancy_yellToTheRooftops = compose(yell, makeLoud);
@@ -28,6 +28,44 @@ const yellToTheRooftops = (str) => yell(makeLoud(str));
 //     return undefined;
 // }
 
-// const safeYellToTheRooftops = (str) => Maybe.of(str)
-//     .map(yell)
-//     .map(makeLoud); 
+const safeYellToTheRooftops = (str) => Maybe.of(str)
+    .chain(yell)
+    .chain(makeLoud) 
+    .getOrElse(':(');
+
+// (int -> string) -> [int] -> [string]
+const specialMap = (fn, array) => {
+    var results = [];
+    for(var i = 0; i <= array.length - 1; i++) {
+        results.push(fn(array[i]))
+    }
+    return results;
+}
+
+
+
+
+// specialFlatMap :: (int -> [string]) -> [int] -> [string]
+const specialFlatMap = (fn, array) => {
+    var results = [];
+    for(var i = 0; i <= array.length - 1; i++) {
+        results.push(...fn(array[i]))
+    }
+    return results;
+}
+
+const stringToArray = int => {
+    if(int === 0) return []; 
+
+    return [int.toString(), ...stringToArray(int - 1)];
+}
+
+const stringToArrayTC = (int) => {
+    return stringToArray2(int, int)
+}
+
+const stringToArray2 = (int, count) => {
+    if(count === 0) return []; 
+
+    return [int.toString(), ...stringToArray2(int, count - 1)];
+}
